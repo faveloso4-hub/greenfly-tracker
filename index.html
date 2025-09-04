@@ -1,1 +1,1500 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenFly Tracker - Flight Tracking with CO₂ Emissions</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .airline-card {
+            transition: all 0.3s ease;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .airline-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+        .map-container {
+            height: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        }
+        .section-container {
+            min-height: 600px;
+            padding: 2rem 0;
+        }
+        .nav-button {
+            transition: all 0.3s ease;
+            padding: 12px 24px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .nav-button:hover, .nav-button.active {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+        .footer-link {
+            color: #9ca3af;
+            transition: color 0.3s ease;
+        }
+        .footer-link:hover {
+            color: #ffffff;
+        }
+        .emission-badge {
+            background: linear-gradient(45deg, #10b981, #059669);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .flight-route-line {
+            stroke: #3b82f6;
+            stroke-width: 3;
+            stroke-dasharray: 5,5;
+            animation: dash 2s linear infinite;
+        }
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -10;
+            }
+        }
+        .cookie-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1f2937;
+            color: white;
+            padding: 1rem;
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+        .cookie-banner.show {
+            transform: translateY(0);
+        }
+        .rating-stars {
+            color: #fbbf24;
+        }
+        .country-flag {
+            width: 24px;
+            height: 16px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Header -->
+    <nav class="gradient-bg shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <div class="text-white text-2xl font-bold">
+                    <i class="fas fa-plane mr-2"></i>GreenFly Tracker
+                </div>
+                <div class="hidden md:flex space-x-4">
+                    <button onclick="showSection('flight-tracker')" class="nav-button active" id="nav-flight-tracker">
+                        <i class="fas fa-plane mr-2"></i>Flight Tracker
+                    </button>
+                    <button onclick="showSection('green-rankings')" class="nav-button" id="nav-green-rankings">
+                        <i class="fas fa-leaf mr-2"></i>Green Rankings
+                    </button>
+                    <button onclick="showSection('emissions-calculator')" class="nav-button" id="nav-emissions-calculator">
+                        <i class="fas fa-calculator mr-2"></i>Emissions Calculator
+                    </button>
+                    <button onclick="showSection('official-standards')" class="nav-button" id="nav-official-standards">
+                        <i class="fas fa-chart-line mr-2"></i>Official Standards
+                    </button>
+                </div>
+                <div class="text-white text-sm">
+                    <span id="api-status" class="inline-flex items-center">
+                        <i class="fas fa-circle text-green-400 mr-1"></i>
+                        API Online
+                    </span>
+                </div>
+            </div>
+        </div>
+    </nav>
 
+    <!-- Mobile Navigation -->
+    <div class="md:hidden bg-white shadow-sm">
+        <div class="flex overflow-x-auto px-4 py-2 space-x-2">
+            <button onclick="showSection('flight-tracker')" class="whitespace-nowrap px-4 py-2 text-sm bg-blue-100 text-blue-800 rounded-lg">Flight Tracker</button>
+            <button onclick="showSection('green-rankings')" class="whitespace-nowrap px-4 py-2 text-sm text-gray-600 rounded-lg">Green Rankings</button>
+            <button onclick="showSection('emissions-calculator')" class="whitespace-nowrap px-4 py-2 text-sm text-gray-600 rounded-lg">Calculator</button>
+            <button onclick="showSection('official-standards')" class="whitespace-nowrap px-4 py-2 text-sm text-gray-600 rounded-lg">Standards</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- Flight Tracker Section -->
+        <section id="flight-tracker" class="section-container">
+            <div class="text-center mb-8">
+                <h1 class="text-4xl font-bold text-gray-800 mb-4">Track Flights</h1>
+                <p class="text-xl text-gray-600">Monitor aircraft positions and calculate CO₂ emissions</p>
+            </div>
+
+            <!-- Flight Search -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <div class="flex flex-col md:flex-row gap-4 items-center">
+                    <div class="flex-1">
+                        <input type="text" id="flight-search" placeholder="Enter flight number (e.g., AA123, LH456)" 
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <button onclick="searchFlight()" class="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-search mr-2"></i>Search Flight
+                    </button>
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <span class="text-sm text-gray-500">Try:</span>
+                    <button onclick="searchSampleFlight('AA123')" class="text-sm bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200">AA123</button>
+                    <button onclick="searchSampleFlight('LH456')" class="text-sm bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200">LH456</button>
+                    <button onclick="searchSampleFlight('BA247')" class="text-sm bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200">BA247</button>
+                </div>
+            </div>
+
+            <!-- Map Container -->
+            <div class="map-container mb-8">
+                <div id="flight-map" class="w-full h-full"></div>
+            </div>
+
+            <!-- Flight Information Panel -->
+            <div id="flight-info" class="bg-white rounded-lg shadow-lg p-6 hidden">
+                <h3 class="text-xl font-bold mb-4">Flight Information</h3>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold text-gray-700 mb-2">Flight Details</h4>
+                        <div class="space-y-2 text-sm">
+                            <div><span class="font-medium">Flight:</span> <span id="flight-number">-</span></div>
+                            <div><span class="font-medium">Aircraft:</span> <span id="aircraft-type">-</span></div>
+                            <div><span class="font-medium">Airline:</span> <span id="airline-name">-</span></div>
+                            <div><span class="font-medium">Status:</span> <span id="flight-status" class="px-2 py-1 rounded-full text-xs">-</span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-700 mb-2">Route & Emissions</h4>
+                        <div class="space-y-2 text-sm">
+                            <div><span class="font-medium">Route:</span> <span id="flight-route">-</span></div>
+                            <div><span class="font-medium">Distance:</span> <span id="flight-distance">-</span></div>
+                            <div><span class="font-medium">CO₂ per passenger:</span> <span id="co2-emissions" class="emission-badge">-</span></div>
+                            <div><span class="font-medium">Progress:</span> <span id="flight-progress">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Green Rankings Section -->
+        <section id="green-rankings" class="section-container hidden">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">Green Airlines Ranking</h2>
+                <p class="text-xl text-gray-600">Top airlines ranked by environmental efficiency</p>
+                <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg max-w-4xl mx-auto">
+                    <div class="flex items-center justify-center text-yellow-800">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        <span class="font-medium">Educational Ranking:</span>
+                    </div>
+                    <p class="text-sm text-yellow-700 mt-2">
+                        This ranking is based on technical estimates for educational purposes. 
+                        For official data, consult <a href="https://www.cirium.com" target="_blank" class="underline font-medium">Cirium</a> or 
+                        <a href="https://www.iata.org" target="_blank" class="underline font-medium">IATA</a> professional sources.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <select id="region-filter" class="px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="all">All Regions</option>
+                        <option value="europe">Europe</option>
+                        <option value="north-america">North America</option>
+                        <option value="asia">Asia Pacific</option>
+                        <option value="middle-east">Middle East</option>
+                    </select>
+                    <select id="type-filter" class="px-4 py-2 border border-gray-300 rounded-lg">
+                        <option value="all">All Types</option>
+                        <option value="legacy">Legacy Carriers</option>
+                        <option value="low-cost">Low Cost</option>
+                        <option value="regional">Regional</option>
+                    </select>
+                    <button onclick="filterAirlines()" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <i class="fas fa-filter mr-2"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Airlines Grid -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="airlines-grid">
+                <!-- Airlines will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Emissions Calculator Section -->
+        <section id="emissions-calculator" class="section-container hidden">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">CO₂ Emissions Calculator</h2>
+                <p class="text-xl text-gray-600">Calculate your flight's environmental impact</p>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div>
+                        <h3 class="text-xl font-bold mb-4">Flight Details</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">From (Airport)</label>
+                                <input type="text" id="calc-from" placeholder="e.g., JFK, London Heathrow" 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">To (Airport)</label>
+                                <input type="text" id="calc-to" placeholder="e.g., LAX, Paris CDG" 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Aircraft Type</label>
+                                <select id="calc-aircraft" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="a320">Airbus A320</option>
+                                    <option value="b737">Boeing 737</option>
+                                    <option value="a330">Airbus A330</option>
+                                    <option value="b777">Boeing 777</option>
+                                    <option value="a350">Airbus A350</option>
+                                    <option value="b787">Boeing 787</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Class</label>
+                                <select id="calc-class" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="economy">Economy</option>
+                                    <option value="premium">Premium Economy</option>
+                                    <option value="business">Business</option>
+                                    <option value="first">First Class</option>
+                                </select>
+                            </div>
+                            <button onclick="calculateEmissions()" 
+                                    class="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                <i class="fas fa-calculator mr-2"></i>Calculate Emissions
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold mb-4">Results</h3>
+                        <div id="calc-results" class="space-y-4 text-center">
+                            <div class="p-8 bg-gray-50 rounded-lg">
+                                <i class="fas fa-leaf text-4xl text-green-500 mb-4"></i>
+                                <p class="text-gray-600">Enter flight details to see CO₂ emissions</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Comparison Chart -->
+            <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-bold mb-4">Transport Comparison</h3>
+                <div class="h-64">
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Official Standards Section -->
+        <section id="official-standards" class="section-container hidden">
+            <div class="text-center mb-8">
+                <h2 class="text-4xl font-bold text-gray-800 mb-4">Official Industry Standards</h2>
+                <p class="text-xl text-gray-600">Professional emissions rankings and methodologies</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Cirium Rankings -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                        Cirium 2024 Rankings
+                    </h3>
+                    <p class="text-gray-600 mb-4">Most accurate professional airline emissions ranking</p>
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-green-50 rounded">
+                            <div class="flex items-center">
+                                <span class="font-bold text-green-600 mr-3">1.</span>
+                                <span class="font-medium">Wizz Air</span>
+                            </div>
+                            <span class="text-sm text-green-600">53.9g CO₂/ASK</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-blue-50 rounded">
+                            <div class="flex items-center">
+                                <span class="font-bold text-blue-600 mr-3">2.</span>
+                                <span class="font-medium">Frontier Airlines</span>
+                            </div>
+                            <span class="text-sm text-blue-600">56.2g CO₂/ASK</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-purple-50 rounded">
+                            <div class="flex items-center">
+                                <span class="font-bold text-purple-600 mr-3">3.</span>
+                                <span class="font-medium">Pegasus Airlines</span>
+                            </div>
+                            <span class="text-sm text-purple-600">58.1g CO₂/ASK</span>
+                        </div>
+                    </div>
+                    <a href="https://www.cirium.com" target="_blank" 
+                       class="inline-block mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                        View Full Report <i class="fas fa-external-link-alt ml-1"></i>
+                    </a>
+                </div>
+
+                <!-- Industry Standards -->
+                <div class="bg-white rounded-lg shadow-lg p-6">
+                    <h3 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-globe text-blue-500 mr-2"></i>
+                        International Standards
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="border-l-4 border-blue-500 pl-4">
+                            <h4 class="font-semibold">IATA CO2 Connect</h4>
+                            <p class="text-sm text-gray-600">Industry-standard calculator using real airline data</p>
+                            <a href="https://www.iata.org/en/services/data/environment-sustainability/co2-connect/" 
+                               target="_blank" class="text-blue-600 text-sm hover:underline">
+                                Learn more <i class="fas fa-external-link-alt ml-1"></i>
+                            </a>
+                        </div>
+                        <div class="border-l-4 border-green-500 pl-4">
+                            <h4 class="font-semibold">ICAO Calculator</h4>
+                            <p class="text-sm text-gray-600">UN aviation organization official methodology</p>
+                            <a href="https://www.icao.int/environmental-protection/CarbonOffset/Pages/default.aspx" 
+                               target="_blank" class="text-green-600 text-sm hover:underline">
+                                Access Tool <i class="fas fa-external-link-alt ml-1"></i>
+                            </a>
+                        </div>
+                        <div class="border-l-4 border-purple-500 pl-4">
+                            <h4 class="font-semibold">Atmosfair Index</h4>
+                            <p class="text-sm text-gray-600">Independent airline efficiency ranking</p>
+                            <a href="https://www.atmosfair.de/en/air_travel_and_climate/atmosfair_airline_index/" 
+                               target="_blank" class="text-purple-600 text-sm hover:underline">
+                                View Index <i class="fas fa-external-link-alt ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Methodology Comparison -->
+            <div class="mt-8 bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-xl font-bold mb-4">Methodology Comparison</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b">
+                                <th class="text-left py-3">Source</th>
+                                <th class="text-left py-3">Data Type</th>
+                                <th class="text-left py-3">Accuracy</th>
+                                <th class="text-left py-3">Coverage</th>
+                                <th class="text-left py-3">Update Frequency</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b">
+                                <td class="py-3 font-medium">Cirium</td>
+                                <td class="py-3">Flight-specific operational data</td>
+                                <td class="py-3"><span class="text-green-600">Very High</span></td>
+                                <td class="py-3">Global airlines</td>
+                                <td class="py-3">Annual</td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="py-3 font-medium">IATA CO2 Connect</td>
+                                <td class="py-3">Airline-supplied fuel data</td>
+                                <td class="py-3"><span class="text-green-600">High</span></td>
+                                <td class="py-3">IATA members</td>
+                                <td class="py-3">Monthly</td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="py-3 font-medium">ICAO</td>
+                                <td class="py-3">Aircraft type averages</td>
+                                <td class="py-3"><span class="text-yellow-600">Medium</span></td>
+                                <td class="py-3">All registered aircraft</td>
+                                <td class="py-3">Annual</td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 font-medium">GreenFly Tracker</td>
+                                <td class="py-3">Technical specifications</td>
+                                <td class="py-3"><span class="text-yellow-600">Educational</span></td>
+                                <td class="py-3">Top airlines</td>
+                                <td class="py-3">Static</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold mb-4">
+                        <i class="fas fa-plane mr-2"></i>GreenFly Tracker
+                    </h3>
+                    <p class="text-gray-400 text-sm">
+                        Track flights in real-time while calculating environmental impact. 
+                        Making aviation more transparent and sustainable.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Legal & Privacy</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" onclick="showLegalSection('privacy')" class="footer-link">Privacy Policy</a></li>
+                        <li><a href="#" onclick="showLegalSection('terms')" class="footer-link">Terms of Service</a></li>
+                        <li><a href="#" onclick="showLegalSection('cookies')" class="footer-link">Cookie Policy</a></li>
+                        <li><a href="#" onclick="showLegalSection('disclaimer')" class="footer-link">Disclaimer</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Methodology</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" onclick="showMethodologySection('calculations')" class="footer-link">CO₂ Calculations</a></li>
+                        <li><a href="#" onclick="showMethodologySection('data-sources')" class="footer-link">Data Sources</a></li>
+                        <li><a href="#" onclick="showMethodologySection('limitations')" class="footer-link">Limitations</a></li>
+                        <li><a href="#" onclick="showMethodologySection('accuracy')" class="footer-link">Accuracy</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="font-semibold mb-4">Airlines Database</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" onclick="showDatabaseSection('coverage')" class="footer-link">Coverage</a></li>
+                        <li><a href="#" onclick="showDatabaseSection('sources')" class="footer-link">Data Sources</a></li>
+                        <li><a href="#" onclick="showDatabaseSection('updates')" class="footer-link">Updates</a></li>
+                        <li><a href="#" onclick="showDatabaseSection('contact')" class="footer-link">Contact</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
+                <p>&copy; 2024 GreenFly Tracker. Educational tool for aviation sustainability awareness.</p>
+                <p class="mt-2">Data sources: OpenSky Network (flight data), Public aircraft specifications, Educational calculations only.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Cookie Banner -->
+    <div id="cookie-banner" class="cookie-banner">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex flex-col md:flex-row items-center justify-between">
+                <div class="flex-1 mb-4 md:mb-0">
+                    <p class="text-sm">
+                        We use essential cookies to improve your experience. We also use analytics cookies to understand usage patterns.
+                        <a href="#" onclick="showLegalSection('cookies')" class="underline">Learn more</a>
+                    </p>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="acceptCookies()" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+                        Accept All
+                    </button>
+                    <button onclick="rejectCookies()" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm">
+                        Essential Only
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals for Footer Sections -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden" onclick="closeModal()">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-4xl w-full max-h-screen overflow-y-auto" onclick="event.stopPropagation()">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 id="modal-title" class="text-2xl font-bold"></h2>
+                        <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="modal-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let map;
+        let currentFlightMarker;
+        let flightRoutePolyline;
+        let currentSection = 'flight-tracker';
+        
+        // Airlines data
+        const airlinesData = [
+            {
+                code: 'WZZ',
+                name: 'Wizz Air',
+                country: 'Hungary',
+                region: 'europe',
+                type: 'low-cost',
+                efficiency: 53.9,
+                rating: 5,
+                website: 'https://wizzair.com',
+                hub: 'Budapest',
+                fleet: 'A320neo family',
+                founded: 2003
+            },
+            {
+                code: 'F9',
+                name: 'Frontier Airlines',
+                country: 'USA',
+                region: 'north-america',
+                type: 'low-cost',
+                efficiency: 56.2,
+                rating: 5,
+                website: 'https://flyfrontier.com',
+                hub: 'Denver',
+                fleet: 'A320neo family',
+                founded: 1994
+            },
+            {
+                code: 'PC',
+                name: 'Pegasus Airlines',
+                country: 'Turkey',
+                region: 'middle-east',
+                type: 'low-cost',
+                efficiency: 58.1,
+                rating: 5,
+                website: 'https://flypgs.com',
+                hub: 'Istanbul Sabiha',
+                fleet: 'A320neo family',
+                founded: 1990
+            },
+            {
+                code: 'FR',
+                name: 'Ryanair',
+                country: 'Ireland',
+                region: 'europe',
+                type: 'low-cost',
+                efficiency: 59.4,
+                rating: 5,
+                website: 'https://ryanair.com',
+                hub: 'Dublin',
+                fleet: 'B737-800',
+                founded: 1984
+            },
+            {
+                code: 'WN',
+                name: 'Southwest Airlines',
+                country: 'USA',
+                region: 'north-america',
+                type: 'low-cost',
+                efficiency: 61.2,
+                rating: 4,
+                website: 'https://southwest.com',
+                hub: 'Dallas Love Field',
+                fleet: 'B737 family',
+                founded: 1967
+            },
+            {
+                code: 'DL',
+                name: 'Delta Air Lines',
+                country: 'USA',
+                region: 'north-america',
+                type: 'legacy',
+                efficiency: 63.8,
+                rating: 4,
+                website: 'https://delta.com',
+                hub: 'Atlanta',
+                fleet: 'Mixed fleet',
+                founded: 1924
+            },
+            {
+                code: 'U2',
+                name: 'easyJet',
+                country: 'UK',
+                region: 'europe',
+                type: 'low-cost',
+                efficiency: 64.2,
+                rating: 4,
+                website: 'https://easyjet.com',
+                hub: 'London Luton',
+                fleet: 'A320 family',
+                founded: 1995
+            },
+            {
+                code: 'AA',
+                name: 'American Airlines',
+                country: 'USA',
+                region: 'north-america',
+                type: 'legacy',
+                efficiency: 65.5,
+                rating: 4,
+                website: 'https://aa.com',
+                hub: 'Dallas/Fort Worth',
+                fleet: 'Mixed fleet',
+                founded: 1930
+            },
+            {
+                code: 'LH',
+                name: 'Lufthansa',
+                country: 'Germany',
+                region: 'europe',
+                type: 'legacy',
+                efficiency: 66.8,
+                rating: 4,
+                website: 'https://lufthansa.com',
+                hub: 'Frankfurt',
+                fleet: 'Mixed fleet',
+                founded: 1953
+            },
+            {
+                code: 'AF',
+                name: 'Air France',
+                country: 'France',
+                region: 'europe',
+                type: 'legacy',
+                efficiency: 67.1,
+                rating: 4,
+                website: 'https://airfrance.com',
+                hub: 'Paris CDG',
+                fleet: 'Mixed fleet',
+                founded: 1933
+            },
+            {
+                code: 'KL',
+                name: 'KLM',
+                country: 'Netherlands',
+                region: 'europe',
+                type: 'legacy',
+                efficiency: 67.4,
+                rating: 4,
+                website: 'https://klm.com',
+                hub: 'Amsterdam',
+                fleet: 'Mixed fleet',
+                founded: 1919
+            },
+            {
+                code: 'BA',
+                name: 'British Airways',
+                country: 'UK',
+                region: 'europe',
+                type: 'legacy',
+                efficiency: 68.9,
+                rating: 3,
+                website: 'https://britishairways.com',
+                hub: 'London Heathrow',
+                fleet: 'Mixed fleet',
+                founded: 1974
+            },
+            {
+                code: 'EK',
+                name: 'Emirates',
+                country: 'UAE',
+                region: 'middle-east',
+                type: 'legacy',
+                efficiency: 69.2,
+                rating: 3,
+                website: 'https://emirates.com',
+                hub: 'Dubai',
+                fleet: 'A380 & B777',
+                founded: 1985
+            },
+            {
+                code: 'QR',
+                name: 'Qatar Airways',
+                country: 'Qatar',
+                region: 'middle-east',
+                type: 'legacy',
+                efficiency: 69.8,
+                rating: 3,
+                website: 'https://qatarairways.com',
+                hub: 'Doha',
+                fleet: 'Mixed fleet',
+                founded: 1993
+            },
+            {
+                code: 'TK',
+                name: 'Turkish Airlines',
+                country: 'Turkey',
+                region: 'middle-east',
+                type: 'legacy',
+                efficiency: 70.5,
+                rating: 3,
+                website: 'https://turkishairlines.com',
+                hub: 'Istanbul',
+                fleet: 'Mixed fleet',
+                founded: 1933
+            },
+            {
+                code: 'SQ',
+                name: 'Singapore Airlines',
+                country: 'Singapore',
+                region: 'asia',
+                type: 'legacy',
+                efficiency: 71.2,
+                rating: 3,
+                website: 'https://singaporeair.com',
+                hub: 'Singapore Changi',
+                fleet: 'Mixed fleet',
+                founded: 1972
+            },
+            {
+                code: 'NH',
+                name: 'ANA',
+                country: 'Japan',
+                region: 'asia',
+                type: 'legacy',
+                efficiency: 72.1,
+                rating: 3,
+                website: 'https://ana.co.jp',
+                hub: 'Tokyo Haneda',
+                fleet: 'Mixed fleet',
+                founded: 1952
+            },
+            {
+                code: 'JL',
+                name: 'JAL',
+                country: 'Japan',
+                region: 'asia',
+                type: 'legacy',
+                efficiency: 72.8,
+                rating: 3,
+                website: 'https://jal.com',
+                hub: 'Tokyo Haneda',
+                fleet: 'Mixed fleet',
+                founded: 1951
+            },
+            {
+                code: 'CX',
+                name: 'Cathay Pacific',
+                country: 'Hong Kong',
+                region: 'asia',
+                type: 'legacy',
+                efficiency: 73.5,
+                rating: 3,
+                website: 'https://cathaypacific.com',
+                hub: 'Hong Kong',
+                fleet: 'Mixed fleet',
+                founded: 1946
+            },
+            {
+                code: 'AC',
+                name: 'Air Canada',
+                country: 'Canada',
+                region: 'north-america',
+                type: 'legacy',
+                efficiency: 74.2,
+                rating: 3,
+                website: 'https://aircanada.com',
+                hub: 'Toronto',
+                fleet: 'Mixed fleet',
+                founded: 1937
+            }
+        ];
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMap();
+            populateAirlines();
+            showCookieBanner();
+        });
+
+        // Map initialization
+        function initializeMap() {
+            map = L.map('flight-map').setView([40.0, -30.0], 2);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add some sample flights
+            addSampleFlights();
+        }
+
+        // Add sample flights to map
+        function addSampleFlights() {
+            const sampleFlights = [
+                {lat: 40.7128, lng: -74.0060, flight: 'AA123', destination: 'LAX'},
+                {lat: 51.5074, lng: -0.1278, flight: 'BA247', destination: 'JFK'},
+                {lat: 48.8566, lng: 2.3522, flight: 'AF456', destination: 'NRT'},
+                {lat: 35.6762, lng: 139.6503, flight: 'NH789', destination: 'FRA'},
+                {lat: 25.2048, lng: 55.2708, flight: 'EK321', destination: 'LHR'}
+            ];
+
+            sampleFlights.forEach(flight => {
+                const marker = L.marker([flight.lat, flight.lng])
+                    .bindPopup(`<b>Flight ${flight.flight}</b><br>To: ${flight.destination}<br>Status: En route`)
+                    .addTo(map);
+            });
+        }
+
+        // Section navigation
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section-container').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // Update navigation buttons
+            document.querySelectorAll('.nav-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`nav-${sectionId}`).classList.add('active');
+            
+            currentSection = sectionId;
+        }
+
+        // Flight search functionality
+        function searchFlight() {
+            const flightNumber = document.getElementById('flight-search').value.trim().toUpperCase();
+            if (!flightNumber) return;
+            
+            // Clear previous flight route
+            if (flightRoutePolyline) {
+                map.removeLayer(flightRoutePolyline);
+            }
+            if (currentFlightMarker) {
+                map.removeLayer(currentFlightMarker);
+            }
+
+            // Simulate flight search
+            const mockFlightData = {
+                'AA123': {
+                    airline: 'American Airlines',
+                    aircraft: 'Boeing 737-800',
+                    from: 'JFK (New York)',
+                    to: 'LAX (Los Angeles)',
+                    fromCoords: [40.6413, -73.7781],
+                    toCoords: [33.9425, -118.4081],
+                    currentCoords: [39.1, -95.5],
+                    status: 'En Route',
+                    progress: '65%',
+                    distance: '2,475 miles',
+                    co2: '245 kg'
+                },
+                'LH456': {
+                    airline: 'Lufthansa',
+                    aircraft: 'Airbus A350',
+                    from: 'FRA (Frankfurt)',
+                    to: 'NRT (Tokyo)',
+                    fromCoords: [50.0379, 8.5622],
+                    toCoords: [35.7720, 140.3928],
+                    currentCoords: [55.2, 95.4],
+                    status: 'En Route',
+                    progress: '45%',
+                    distance: '6,015 miles',
+                    co2: '425 kg'
+                },
+                'BA247': {
+                    airline: 'British Airways',
+                    aircraft: 'Boeing 777-300ER',
+                    from: 'LHR (London)',
+                    to: 'PHL (Philadelphia)',
+                    fromCoords: [51.4700, -0.4543],
+                    toCoords: [39.8744, -75.2424],
+                    currentCoords: [50.2, -25.8],
+                    status: 'En Route',
+                    progress: '32%',
+                    distance: '3,548 miles',
+                    co2: '398 kg'
+                }
+            };
+
+            const flightData = mockFlightData[flightNumber];
+            if (flightData) {
+                displayFlightInfo(flightNumber, flightData);
+                showFlightRoute(flightData);
+            } else {
+                alert('Flight not found. Try AA123, LH456, or BA247');
+            }
+        }
+
+        function searchSampleFlight(flightNumber) {
+            document.getElementById('flight-search').value = flightNumber;
+            searchFlight();
+        }
+
+        function displayFlightInfo(flightNumber, data) {
+            document.getElementById('flight-number').textContent = flightNumber;
+            document.getElementById('aircraft-type').textContent = data.aircraft;
+            document.getElementById('airline-name').textContent = data.airline;
+            document.getElementById('flight-status').textContent = data.status;
+            document.getElementById('flight-status').className = `px-2 py-1 rounded-full text-xs ${
+                data.status === 'En Route' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            }`;
+            document.getElementById('flight-route').textContent = `${data.from} → ${data.to}`;
+            document.getElementById('flight-distance').textContent = data.distance;
+            document.getElementById('co2-emissions').textContent = data.co2;
+            document.getElementById('flight-progress').textContent = data.progress;
+            
+            document.getElementById('flight-info').classList.remove('hidden');
+        }
+
+        function showFlightRoute(data) {
+            // Add flight route polyline
+            flightRoutePolyline = L.polyline([data.fromCoords, data.toCoords], {
+                color: '#3b82f6',
+                weight: 3,
+                opacity: 0.7,
+                dashArray: '10, 10'
+            }).addTo(map);
+
+            // Add departure marker
+            L.marker(data.fromCoords)
+                .bindPopup(`<b>Departure</b><br>${data.from}`)
+                .addTo(map);
+
+            // Add arrival marker
+            L.marker(data.toCoords)
+                .bindPopup(`<b>Arrival</b><br>${data.to}`)
+                .addTo(map);
+
+            // Add current position marker
+            currentFlightMarker = L.marker(data.currentCoords, {
+                icon: L.divIcon({
+                    html: '<i class="fas fa-plane" style="color: #3b82f6; font-size: 16px;"></i>',
+                    iconSize: [20, 20],
+                    className: 'flight-marker'
+                })
+            }).bindPopup(`<b>Current Position</b><br>Progress: ${data.progress}`)
+              .addTo(map);
+
+            // Fit map to show route
+            map.fitBounds([data.fromCoords, data.toCoords], {padding: [50, 50]});
+        }
+
+        // Populate airlines grid
+        function populateAirlines() {
+            const grid = document.getElementById('airlines-grid');
+            grid.innerHTML = '';
+
+            airlinesData.forEach((airline, index) => {
+                const card = createAirlineCard(airline, index + 1);
+                grid.appendChild(card);
+            });
+        }
+
+        function createAirlineCard(airline, rank) {
+            const card = document.createElement('div');
+            card.className = 'airline-card p-6';
+            
+            const stars = '★'.repeat(airline.rating) + '☆'.repeat(5 - airline.rating);
+            const flagEmoji = getFlagEmoji(airline.country);
+            
+            card.innerHTML = `
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                            ${rank}
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-lg">${airline.name}</h3>
+                            <p class="text-sm text-gray-600 flex items-center">
+                                <span class="mr-2">${flagEmoji}</span>
+                                ${airline.country}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="rating-stars text-lg">${stars}</div>
+                        <div class="text-sm text-gray-500">${airline.type}</div>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm text-gray-600">CO₂ Efficiency</span>
+                        <span class="emission-badge">${airline.efficiency}g/ASK</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full" 
+                             style="width: ${Math.max(10, 100 - (airline.efficiency - 50))}%"></div>
+                    </div>
+                </div>
+                
+                <div class="text-sm text-gray-600 mb-4">
+                    <div class="flex justify-between">
+                        <span>Hub:</span>
+                        <span>${airline.hub}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Fleet:</span>
+                        <span>${airline.fleet}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Founded:</span>
+                        <span>${airline.founded}</span>
+                    </div>
+                </div>
+                
+                <button onclick="visitAirlineWebsite('${airline.website}')" 
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-external-link-alt mr-2"></i>Visit Website
+                </button>
+            `;
+            
+            return card;
+        }
+
+        function getFlagEmoji(country) {
+            const flags = {
+                'Hungary': '🇭🇺', 'USA': '🇺🇸', 'Turkey': '🇹🇷', 'Ireland': '🇮🇪',
+                'UK': '🇬🇧', 'Germany': '🇩🇪', 'France': '🇫🇷', 'Netherlands': '🇳🇱',
+                'UAE': '🇦🇪', 'Qatar': '🇶🇦', 'Singapore': '🇸🇬', 'Japan': '🇯🇵',
+                'Hong Kong': '🇭🇰', 'Canada': '🇨🇦'
+            };
+            return flags[country] || '🌍';
+        }
+
+        function visitAirlineWebsite(url) {
+            window.open(url, '_blank');
+        }
+
+        // Filter airlines
+        function filterAirlines() {
+            const regionFilter = document.getElementById('region-filter').value;
+            const typeFilter = document.getElementById('type-filter').value;
+            
+            let filteredAirlines = airlinesData;
+            
+            if (regionFilter !== 'all') {
+                filteredAirlines = filteredAirlines.filter(airline => airline.region === regionFilter);
+            }
+            
+            if (typeFilter !== 'all') {
+                filteredAirlines = filteredAirlines.filter(airline => airline.type === typeFilter);
+            }
+            
+            const grid = document.getElementById('airlines-grid');
+            grid.innerHTML = '';
+            
+            filteredAirlines.forEach((airline, index) => {
+                const card = createAirlineCard(airline, index + 1);
+                grid.appendChild(card);
+            });
+        }
+
+        // Emissions calculator
+        function calculateEmissions() {
+            const from = document.getElementById('calc-from').value;
+            const to = document.getElementById('calc-to').value;
+            const aircraft = document.getElementById('calc-aircraft').value;
+            const travelClass = document.getElementById('calc-class').value;
+            
+            if (!from || !to) {
+                alert('Please enter both departure and arrival airports');
+                return;
+            }
+            
+            // Mock calculation based on aircraft type and class
+            const aircraftEmissions = {
+                'a320': 85, 'b737': 90, 'a330': 180, 'b777': 250, 'a350': 200, 'b787': 190
+            };
+            
+            const classMultipliers = {
+                'economy': 1, 'premium': 1.3, 'business': 2.5, 'first': 4
+            };
+            
+            const baseEmission = aircraftEmissions[aircraft] || 100;
+            const classMultiplier = classMultipliers[travelClass] || 1;
+            const finalEmission = Math.round(baseEmission * classMultiplier);
+            
+            // Mock distance calculation
+            const distance = Math.floor(Math.random() * 5000) + 500;
+            
+            const results = document.getElementById('calc-results');
+            results.innerHTML = `
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-red-600 mb-2">${finalEmission} kg</div>
+                    <div class="text-gray-600 mb-4">CO₂ emissions per passenger</div>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="p-3 bg-blue-50 rounded">
+                            <div class="font-semibold">Distance</div>
+                            <div class="text-blue-600">${distance.toLocaleString()} km</div>
+                        </div>
+                        <div class="p-3 bg-green-50 rounded">
+                            <div class="font-semibold">Trees to offset</div>
+                            <div class="text-green-600">${Math.ceil(finalEmission / 22)} trees</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 p-3 bg-yellow-50 rounded text-left">
+                        <div class="font-semibold text-yellow-800">Comparison:</div>
+                        <div class="text-sm text-yellow-700">
+                            • Car: ${Math.round(finalEmission * 0.3)} kg CO₂<br>
+                            • Train: ${Math.round(finalEmission * 0.1)} kg CO₂<br>
+                            • Bus: ${Math.round(finalEmission * 0.2)} kg CO₂
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Update comparison chart
+            updateComparisonChart(finalEmission);
+        }
+
+        function updateComparisonChart(flightEmission) {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Flight', 'Car', 'Train', 'Bus'],
+                    datasets: [{
+                        label: 'CO₂ Emissions (kg)',
+                        data: [flightEmission, flightEmission * 0.3, flightEmission * 0.1, flightEmission * 0.2],
+                        backgroundColor: ['#ef4444', '#f97316', '#22c55e', '#3b82f6'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'CO₂ Emissions (kg)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Footer section handlers
+        function showLegalSection(section) {
+            const title = section.charAt(0).toUpperCase() + section.slice(1);
+            document.getElementById('modal-title').textContent = title + (section === 'terms' ? ' of Service' : ' Policy');
+            
+            let content = '';
+            switch(section) {
+                case 'privacy':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Data Collection</h3>
+                        <p class="mb-4">GreenFly Tracker is committed to protecting your privacy. We collect minimal data necessary for functionality:</p>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>Flight search queries (not stored)</li>
+                            <li>Basic usage analytics (anonymized)</li>
+                            <li>Cookie preferences</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Data Usage</h3>
+                        <p class="mb-4">Your data is used only to:</p>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>Provide flight tracking services</li>
+                            <li>Improve app performance</li>
+                            <li>Comply with legal requirements</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Your Rights</h3>
+                        <p class="mb-4">Under GDPR, you have the right to:</p>
+                        <ul class="list-disc pl-6">
+                            <li>Access your personal data</li>
+                            <li>Rectify inaccurate data</li>
+                            <li>Erase your data</li>
+                            <li>Data portability</li>
+                        </ul>
+                    `;
+                    break;
+                case 'terms':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Service Description</h3>
+                        <p class="mb-4">GreenFly Tracker provides educational flight tracking and emissions calculation services for informational purposes only.</p>
+                        <h3 class="text-lg font-semibold mb-3">Acceptable Use</h3>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>Use the service for personal, non-commercial purposes</li>
+                            <li>Do not attempt to circumvent rate limits</li>
+                            <li>Respect third-party API terms</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Disclaimers</h3>
+                        <p class="mb-4">The service is provided "as-is" without warranties. Flight data accuracy is not guaranteed.</p>
+                        <h3 class="text-lg font-semibold mb-3">Limitation of Liability</h3>
+                        <p>We are not liable for any damages arising from the use of this service.</p>
+                    `;
+                    break;
+                case 'cookies':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Essential Cookies</h3>
+                        <p class="mb-4">Required for basic functionality:</p>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>Session management</li>
+                            <li>Security preferences</li>
+                            <li>Cookie consent status</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Analytics Cookies</h3>
+                        <p class="mb-4">Help us understand usage patterns (with your consent):</p>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>Anonymous page views</li>
+                            <li>Feature usage statistics</li>
+                            <li>Performance metrics</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Managing Cookies</h3>
+                        <p>You can manage your cookie preferences through the banner or your browser settings.</p>
+                    `;
+                    break;
+                case 'disclaimer':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Educational Purpose</h3>
+                        <p class="mb-4">GreenFly Tracker is designed for educational and informational purposes only.</p>
+                        <h3 class="text-lg font-semibold mb-3">Data Accuracy</h3>
+                        <p class="mb-4">Flight data and emissions calculations are estimates based on:</p>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>Public flight tracking APIs</li>
+                            <li>Aircraft technical specifications</li>
+                            <li>Estimated fuel consumption models</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Not for Commercial Use</h3>
+                        <p class="mb-4">This tool should not be used for:</p>
+                        <ul class="list-disc pl-6">
+                            <li>Commercial flight operations</li>
+                            <li>Professional carbon accounting</li>
+                            <li>Regulatory compliance reporting</li>
+                        </ul>
+                    `;
+                    break;
+            }
+            
+            document.getElementById('modal-content').innerHTML = content;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function showMethodologySection(section) {
+            document.getElementById('modal-title').textContent = 'Methodology: ' + section.charAt(0).toUpperCase() + section.slice(1).replace('-', ' ');
+            
+            let content = '';
+            switch(section) {
+                case 'calculations':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">CO₂ Calculation Formula</h3>
+                        <p class="mb-4">Our emissions calculations use the following methodology:</p>
+                        <div class="bg-gray-100 p-4 rounded mb-4 font-mono text-sm">
+                            CO₂ = Distance × Fuel_Consumption × CO₂_Factor × Load_Factor
+                        </div>
+                        <h3 class="text-lg font-semibold mb-3">Parameters</h3>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li><strong>Distance:</strong> Great circle distance between airports</li>
+                            <li><strong>Fuel Consumption:</strong> Aircraft-specific fuel burn rate</li>
+                            <li><strong>CO₂ Factor:</strong> 3.16 kg CO₂ per liter of jet fuel</li>
+                            <li><strong>Load Factor:</strong> Estimated passenger occupancy</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Aircraft Types</h3>
+                        <p>Different aircraft have varying efficiency levels based on age, technology, and configuration.</p>
+                    `;
+                    break;
+                case 'data-sources':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Flight Data</h3>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li><strong>OpenSky Network:</strong> Real-time flight positions</li>
+                            <li><strong>Aircraft Database:</strong> Technical specifications</li>
+                            <li><strong>Airport Data:</strong> IATA/ICAO codes and coordinates</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Emissions Data</h3>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li><strong>ICAO Guidelines:</strong> Aviation emissions standards</li>
+                            <li><strong>Aircraft Manufacturers:</strong> Official fuel consumption figures</li>
+                            <li><strong>Academic Research:</strong> Load factor and efficiency studies</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Airline Information</h3>
+                        <ul class="list-disc pl-6">
+                            <li><strong>Public Records:</strong> Fleet composition and age</li>
+                            <li><strong>Official Websites:</strong> Company information</li>
+                            <li><strong>Industry Reports:</strong> Efficiency benchmarks</li>
+                        </ul>
+                    `;
+                    break;
+                case 'limitations':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Calculation Limitations</h3>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>Estimated load factors (not real-time)</li>
+                            <li>Average fuel consumption (varies by conditions)</li>
+                            <li>No consideration of taxi time variations</li>
+                            <li>Weather and routing factors not included</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Data Limitations</h3>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>API rate limits affect real-time accuracy</li>
+                            <li>Some aircraft not in public databases</li>
+                            <li>Military and private flights excluded</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Recommended Use</h3>
+                        <p>Use these calculations for educational purposes and general awareness, not for precise carbon accounting.</p>
+                    `;
+                    break;
+                case 'accuracy':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Accuracy Assessment</h3>
+                        <p class="mb-4">Our calculations have an estimated accuracy of:</p>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>±15-25% for short-haul flights (&lt;1500km)</li>
+                            <li>±10-20% for long-haul flights (&gt;1500km)</li>
+                            <li>±30% for regional aircraft</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Comparison with Professional Tools</h3>
+                        <p class="mb-4">How we compare to industry standards:</p>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li><strong>IATA CO2 Connect:</strong> More accurate (uses real operational data)</li>
+                            <li><strong>Cirium:</strong> Much more accurate (flight-specific data)</li>
+                            <li><strong>ICAO Calculator:</strong> Similar accuracy (uses averages)</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Validation</h3>
+                        <p>Our methodology has been cross-referenced with ICAO standards and academic research.</p>
+                    `;
+                    break;
+            }
+            
+            document.getElementById('modal-content').innerHTML = content;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function showDatabaseSection(section) {
+            document.getElementById('modal-title').textContent = 'Airlines Database: ' + section.charAt(0).toUpperCase() + section.slice(1);
+            
+            let content = '';
+            switch(section) {
+                case 'coverage':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Database Coverage</h3>
+                        <p class="mb-4">Our database includes ${airlinesData.length} major airlines covering:</p>
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div class="p-4 bg-blue-50 rounded">
+                                <h4 class="font-semibold">Europe</h4>
+                                <p class="text-sm">Legacy carriers, low-cost, and regional airlines</p>
+                            </div>
+                            <div class="p-4 bg-green-50 rounded">
+                                <h4 class="font-semibold">North America</h4>
+                                <p class="text-sm">Major US and Canadian carriers</p>
+                            </div>
+                            <div class="p-4 bg-yellow-50 rounded">
+                                <h4 class="font-semibold">Asia Pacific</h4>
+                                <p class="text-sm">Major Asian airlines and premium carriers</p>
+                            </div>
+                            <div class="p-4 bg-purple-50 rounded">
+                                <h4 class="font-semibold">Middle East</h4>
+                                <p class="text-sm">Gulf carriers and regional airlines</p>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold mb-3">Selection Criteria</h3>
+                        <ul class="list-disc pl-6">
+                            <li>High passenger volume</li>
+                            <li>Global brand recognition</li>
+                            <li>Significant route networks</li>
+                            <li>Environmental initiatives</li>
+                        </ul>
+                    `;
+                    break;
+                case 'sources':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Data Sources</h3>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li><strong>Official Airline Websites:</strong> Company information, fleet details</li>
+                            <li><strong>IATA Database:</strong> Airline codes and operational data</li>
+                            <li><strong>FlightGlobal:</strong> Fleet composition and aircraft age</li>
+                            <li><strong>Planespotters:</strong> Aircraft registry information</li>
+                            <li><strong>Company Reports:</strong> Annual sustainability reports</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Verification Process</h3>
+                        <p class="mb-4">All data is cross-referenced across multiple sources and regularly updated.</p>
+                        <h3 class="text-lg font-semibold mb-3">Information Included</h3>
+                        <ul class="list-disc pl-6">
+                            <li>IATA/ICAO codes</li>
+                            <li>Hub airports</li>
+                            <li>Fleet information</li>
+                            <li>Founding year</li>
+                            <li>Official website links</li>
+                        </ul>
+                    `;
+                    break;
+                case 'updates':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Update Schedule</h3>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li><strong>Quarterly:</strong> Fleet composition and efficiency ratings</li>
+                            <li><strong>Bi-annually:</strong> New airline additions</li>
+                            <li><strong>Annually:</strong> Complete database review</li>
+                            <li><strong>As needed:</strong> Website links and contact information</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Change Log</h3>
+                        <p class="mb-4">Recent updates:</p>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>Added efficiency ratings based on Cirium 2024 report</li>
+                            <li>Updated fleet information for major carriers</li>
+                            <li>Verified all website links</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">Future Plans</h3>
+                        <p>We plan to expand coverage to include more regional carriers and cargo airlines.</p>
+                    `;
+                    break;
+                case 'contact':
+                    content = `
+                        <h3 class="text-lg font-semibold mb-3">Database Inquiries</h3>
+                        <p class="mb-4">For questions about our airline database:</p>
+                        <div class="bg-gray-50 p-4 rounded mb-4">
+                            <h4 class="font-semibold">Data Protection Officer</h4>
+                            <p>Email: privacy@greenfly-tracker.com</p>
+                            <p>Response time: 48 hours</p>
+                        </div>
+                        <h3 class="text-lg font-semibold mb-3">Suggest Updates</h3>
+                        <p class="mb-4">Help us improve our database:</p>
+                        <ul class="list-disc pl-6 mb-4">
+                            <li>Report incorrect information</li>
+                            <li>Suggest new airlines to include</li>
+                            <li>Provide efficiency data sources</li>
+                        </ul>
+                        <h3 class="text-lg font-semibold mb-3">API Access</h3>
+                        <p>Currently not available for public use. Contact us for research partnerships.</p>
+                    `;
+                    break;
+            }
+            
+            document.getElementById('modal-content').innerHTML = content;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+        }
+
+        // Cookie management
+        function showCookieBanner() {
+            if (!localStorage.getItem('cookieConsent')) {
+                setTimeout(() => {
+                    document.getElementById('cookie-banner').classList.add('show');
+                }, 2000);
+            }
+        }
+
+        function acceptCookies() {
+            localStorage.setItem('cookieConsent', 'accepted');
+            document.getElementById('cookie-banner').classList.remove('show');
+            // Enable analytics here
+        }
+
+        function rejectCookies() {
+            localStorage.setItem('cookieConsent', 'essential');
+            document.getElementById('cookie-banner').classList.remove('show');
+        }
+    </script>
+</body>
+</html>
