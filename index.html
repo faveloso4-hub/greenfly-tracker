@@ -9,12 +9,195 @@ Original: https://faveloso4-hub.github.io/greenfly-tracker/
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GreenFly Tracker - Flight Tracking with CO₂ Emissions</title>
+    
+    <!-- Primary Meta Tags -->
+    <title>GreenFly Tracker - Flight Tracking with CO₂ Emissions Calculator | Sustainable Aviation</title>
+    <meta name="title" content="GreenFly Tracker - Flight Tracking with CO₂ Emissions Calculator | Sustainable Aviation">
+    <meta name="description" content="Track flights in real-time while calculating CO₂ emissions. Green airlines ranking, emissions calculator, and sustainable aviation tools. Free flight tracker with environmental impact awareness.">
+    <meta name="keywords" content="flight tracker, co2 emissions calculator, green airlines ranking, sustainable aviation, carbon footprint flights, eco friendly airlines, flight emissions, aviation sustainability, real time flight tracking, environmental impact flights">
+    <meta name="author" content="Edoardo Nika">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta name="language" content="Italian">
+    <meta name="geo.region" content="IT">
+    <meta name="geo.placename" content="Italy">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://greenfly-tracker.netlify.app/">
+    <meta property="og:title" content="GreenFly Tracker - Flight Tracking with CO₂ Emissions Calculator">
+    <meta property="og:description" content="Track flights in real-time while calculating CO₂ emissions. Green airlines ranking, emissions calculator, and sustainable aviation tools.">
+    <meta property="og:image" content="https://greenfly-tracker.netlify.app/og-image.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="GreenFly Tracker">
+    <meta property="og:locale" content="it_IT">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://greenfly-tracker.netlify.app/">
+    <meta property="twitter:title" content="GreenFly Tracker - Flight Tracking with CO₂ Emissions Calculator">
+    <meta property="twitter:description" content="Track flights in real-time while calculating CO₂ emissions. Green airlines ranking and sustainable aviation tools.">
+    <meta property="twitter:image" content="https://greenfly-tracker.netlify.app/og-image.jpg">
+    <meta name="twitter:creator" content="@GreenFlyTracker">
+    
+    <!-- Additional Meta Tags -->
+    <meta name="theme-color" content="#667eea">
+    <meta name="msapplication-TileColor" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="GreenFly Tracker">
+    <meta name="application-name" content="GreenFly Tracker">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://greenfly-tracker.netlify.app/">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link rel="dns-prefetch" href="//opensky-network.org">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    
+    <!-- Stylesheets -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "GreenFly Tracker",
+        "description": "Real-time flight tracking with CO₂ emissions calculator and green airlines ranking for sustainable aviation awareness",
+        "url": "https://greenfly-tracker.netlify.app",
+        "applicationCategory": "Travel",
+        "operatingSystem": "Any",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "EUR"
+        },
+        "author": {
+            "@type": "Person",
+            "name": "Edoardo Nika"
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "GreenFly Tracker",
+            "url": "https://greenfly-tracker.netlify.app"
+        },
+        "datePublished": "2024-09-05",
+        "dateModified": "2024-09-05",
+        "inLanguage": "it-IT",
+        "isAccessibleForFree": true,
+        "keywords": "flight tracker, CO2 emissions, green airlines, sustainable aviation, carbon footprint",
+        "featureList": [
+            "Real-time flight tracking",
+            "CO₂ emissions calculator", 
+            "Green airlines ranking",
+            "Flight route visualization",
+            "Environmental impact assessment"
+        ]
+    }
+    </script>
+    
+    <!-- Additional Structured Data for Organization -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "GreenFly Tracker",
+        "url": "https://greenfly-tracker.netlify.app",
+        "description": "Sustainable aviation tracking platform combining flight monitoring with environmental impact awareness",
+        "foundingDate": "2024",
+        "sameAs": [
+            "https://www.linkedin.com/company/greenfly-tracker"
+        ],
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer service",
+            "email": "info@greenfly-tracker.com"
+        }
+    }
+    </script>
+    
+    <!-- Breadcrumb Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://greenfly-tracker.netlify.app"
+            },
+            {
+                "@type": "ListItem", 
+                "position": 2,
+                "name": "Flight Tracker",
+                "item": "https://greenfly-tracker.netlify.app#flight-tracker"
+            },
+            {
+                "@type": "ListItem",
+                "position": 3, 
+                "name": "Green Rankings",
+                "item": "https://greenfly-tracker.netlify.app#green-rankings"
+            },
+            {
+                "@type": "ListItem",
+                "position": 4,
+                "name": "Emissions Calculator", 
+                "item": "https://greenfly-tracker.netlify.app#emissions-calculator"
+            }
+        ]
+    }
+    </script>
+    
+    <!-- FAQ Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {
+                "@type": "Question",
+                "name": "How accurate are the CO₂ emissions calculations?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Our CO₂ calculations have an estimated accuracy of ±15-25% for short-haul flights and ±10-20% for long-haul flights. They are based on aircraft specifications, distance, and estimated load factors for educational purposes."
+                }
+            },
+            {
+                "@type": "Question", 
+                "name": "Which airlines are ranked as most environmentally friendly?",
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "Based on Cirium 2024 data, Wizz Air (53.9g CO₂/ASK), Frontier Airlines (56.2g CO₂/ASK), and Pegasus Airlines (58.1g CO₂/ASK) are among the most fuel-efficient airlines."
+                }
+            },
+            {
+                "@type": "Question",
+                "name": "Is GreenFly Tracker free to use?",
+                "acceptedAnswer": {
+                    "@type": "Answer", 
+                    "text": "Yes, GreenFly Tracker is completely free to use. It's an educational tool designed to raise awareness about aviation's environmental impact."
+                }
+            }
+        ]
+    }
+    </script>
+    
     <style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1504,6 +1687,3 @@ Original: https://faveloso4-hub.github.io/greenfly-tracker/
     </script>
 </body>
 </html>
-
-
-
